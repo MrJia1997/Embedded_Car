@@ -70,5 +70,5 @@ implementation {
   components new AMSenderC(AM_BLINKTORADIO);
   App.AMSend -> AMSenderC;
   components new AMReceiverC(AM_BLINKTORADIO);
-  App.Receive -> AMReceiverC; 
+  App.Receive -> AMReceiverC;
 }
