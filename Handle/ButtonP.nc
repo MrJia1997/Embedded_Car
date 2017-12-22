@@ -1,4 +1,4 @@
-module ButtonC {
+module ButtonP {
     provides interface Button;
     uses {
         interface HplMsp430GeneralIO as PortA;
