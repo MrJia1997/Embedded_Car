@@ -1,4 +1,4 @@
-#include "Message.h"
+#include "CarMessage.h"
 
 module CarP {
     provides interface Car;
@@ -14,8 +14,8 @@ implementation {
     
     Control_Msg local;
     uint8_t sendCount;
-    // bool busy = FALSE;
-    
+    // bool busy;
+
     void localInit() {
         local.header1 = HEADER_1;
         local.header2 = HEADER_2;
