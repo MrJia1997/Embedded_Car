@@ -71,4 +71,6 @@ implementation {
   App.AMSend -> AMSenderC;
   components new AMReceiverC(AM_BLINKTORADIO);
   App.Receive -> AMReceiverC;
+  components ButtonC;
+  App.Button -> ButtonC.Button;
 }

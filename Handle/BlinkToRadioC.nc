@@ -51,6 +51,9 @@
 #include <Msp430Adc12.h>
 #include "BlinkToRadio.h"
 
+#define SPIN_ANGLE 2500
+#define MOVE_SPEED 500
+
 module BlinkToRadioC {
   uses interface Boot;
   uses interface Leds;
@@ -61,16 +64,131 @@ module BlinkToRadioC {
   uses interface SplitControl as AMControl;
   uses interface Read<uint16_t> as Read1;
   uses interface Read<uint16_t> as Read2;
+  uses interface Button;
 }
 implementation {
 
   uint16_t counter;
   message_t pkt;
   bool busy = FALSE;
+
+  //操作信息
+  bool buttons[6] = {FALSE,FALSE,FALSE,FALSE,FALSE,FALSE};
+  // A:舵机1 B:舵机2 C:舵机3 D:左转 E:右转 F:停止 
   uint16_t joystick_x;
   uint16_t joystick_y;
+  //当前已经获取了多少个输入
+  int gotInputCount = 0;
+
   uint8_t joystick = 0x06;
   uint8_t pre_joystick = 0x06;
+
+
+
+  void getInputs() {
+    call Read1.read();
+    call Read2.read();
+    call Button.pinvalueA();
+    call Button.pinvalueB();
+    call Button.pinvalueC();
+    call Button.pinvalueD();
+    call Button.pinvalueE();
+    call Button.pinvalueF();
+  }
+
+  void sendOneInstruct() {
+    getInputs();
+  }
+
+  void sendInstruct() {
+    BlinkToRadioMsg* sndPayload;
+    int i=0;
+    bool flag = FALSE;
+
+    sndPayload = (BlinkToRadioMsg*)(call Packet.getPayload(&pkt, sizeof(BlinkToRadioMsg)));
+
+    //检验按钮
+    for (i=0;i<6;i++) {
+      if (buttons[i] == TRUE) {
+        switch (i){
+          case 0: { //舵机1
+            sndPayload->type = 0x01;
+            sndPayload->data = SPIN_ANGLE;
+            break;
+          }
+          case 1: { //舵机2
+            sndPayload->type = 0x07;
+            sndPayload->data = SPIN_ANGLE;
+            break;
+          }
+          case 2: { //舵机3
+            sndPayload->type = 0x08;
+            sndPayload->data = SPIN_ANGLE;
+            break;
+          }
+          case 3: { //左转
+            sndPayload->type = 0x04;
+            sndPayload->data = MOVE_SPEED;
+            break;
+          }
+          case 4: { //右转
+            sndPayload->type = 0x05;
+            sndPayload->data = MOVE_SPEED;
+            break;
+          }
+          case 5: { //停止
+            sndPayload->type = 0x06;
+            sndPayload->data = 0;
+            break;
+          }
+          default:
+            break;
+        }
+        flag = TRUE;
+        break; 
+      }
+    }
+
+    //检验摇杆
+    if (flag == FALSE) {
+      if ( joystick_y > 500 ){ //前进
+        joystick = 0x02;
+        sndPayload->type = 0x02;
+        sndPayload->data = MOVE_SPEED;
+      }
+      else if ( joystick_y < 500 ){  //后退
+        joystick = 0x03;
+        sndPayload->type = 0x03;
+        sndPayload->data = MOVE_SPEED;
+      }
+      else {  //停止
+        joystick = 0x06;  
+        sndPayload->type = 0x06;
+        sndPayload->data = 0;
+      }
+      // else if (joystick_x > 500 && joystick_x < 500){  //左转
+      //   joystick = 0x04;
+      // }
+      // else if (joystick_x > 500 && joystick_x < 500){  //右转
+      //   joystick = 0x05;
+      // }
+      // else {  //停止
+      //   joystick = 0x06;  
+      // }
+    }
+
+    //发送
+    counter++;
+    if (!busy) {
+      if (sndPayload == NULL) {
+        return;
+      }
+
+      if (call AMSend.send(AM_SEND_ID, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
+        busy = TRUE;
+      }
+    }
+  }
 
   void setLeds(uint16_t val) {
     if (val & 0x01)
@@ -104,51 +222,7 @@ implementation {
   }
 
   event void Timer0.fired() {
-    call Read1.read();
-    call Read2.read();
-    if (joystick_x > 500 && joystick_x < 500){
-      joystick = 0x02;
-    }
-    else if (joystick_x > 500 && joystick_x < 500){
-      joystick = 0x03;
-    }
-    else if (joystick_x > 500 && joystick_x < 500){
-      joystick = 0x04;
-    }
-    else if (joystick_x > 500 && joystick_x < 500){
-      joystick = 0x05;
-    }
-    else {
-      joystick = 0x06;
-    }
-    counter++;
-    if (!busy) {
-      if(joystick != pre_joystick){
-        BlinkToRadioMsg* btrpkt = 
-	    (BlinkToRadioMsg*)(call Packet.getPayload(&pkt, sizeof(BlinkToRadioMsg)));
-        if (btrpkt == NULL) {
-	       return;
-        }
-        btrpkt->type = joystick;
-        btrpkt->data = 0x0500;
-        if (call AMSend.send(AM_SEND_ID, 
-          &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
-          busy = TRUE;
-        }
-      }
-    }
-  }
-
-  event void Read1.readDone(error_t result, uint16_t val) {
-    if (result == SUCCESS) {
-      joystick_x = val;
-    }
-  }
-
-  event void Read2.readDone(error_t result, uint16_t val) {
-    if (result == SUCCESS) {
-      joystick_y = val;
-    }
+    sendOneInstruct();
   }
 
   event void AMSend.sendDone(message_t* msg, error_t err) {
@@ -159,9 +233,110 @@ implementation {
   }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+    BlinkToRadioMsg * rcvPayload;
     if (len == sizeof(BlinkToRadioMsg)) {
-      BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)payload;
+      rcvPayload = (BlinkToRadioMsg*)payload;
     }
     return msg;
+  }
+
+  event void Read1.readDone(error_t result, uint16_t val) {
+    if (result == SUCCESS) {
+      joystick_x = val;
+      
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    }
+  }
+
+  event void Read2.readDone(error_t result, uint16_t val) {
+    if (result == SUCCESS) {
+      joystick_y = val;
+
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    }
+  }
+
+  event void Button.pinvalueADone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[0] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    }
+  }
+  
+  event void Button.pinvalueBDone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[1] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    }
+  }
+
+  event void Button.pinvalueCDone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[2] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    }
+  }
+
+  event void Button.pinvalueDDone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[3] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    } 
+  }
+
+  event void Button.pinvalueEDone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[4] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    } 
+  }
+
+  event void Button.pinvalueFDone(error_t error, bool val){
+    if (error == SUCCESS){
+      buttons[5] = val;
+      gotInputCount++;
+      if (gotInputCount >= 8) {
+        gotInputCount = 0;
+        sendInstruct();
+      }
+    } 
+  }
+
+  event void Button.startDone(error_t error) {
+    if (error != SUCCESS) {
+      call Button.start();
+    }
+  }
+
+  event void Button.stopDone(error_t error) {
+    //todo 
   }
 }
