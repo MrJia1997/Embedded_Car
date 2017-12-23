@@ -67,8 +67,6 @@ module BlinkToRadioC {
   uses interface Button;
 }
 implementation {
-
-  uint16_t counter;
   message_t pkt;
   bool busy = FALSE;
 
@@ -80,10 +78,27 @@ implementation {
   //当前已经获取了多少个输入
   int gotInputCount = 0;
 
-  uint8_t joystick = 0x06;
-  uint8_t pre_joystick = 0x06;
+  uint8_t currentInstruct = 0x06;
+  uint8_t previousInstruct = 0x06;
 
+  void setLeds(uint8_t val) {
+    if (val & 0x01)
+      call Leds.led0On();
+    else 
+      call Leds.led0Off();
+    if (val & 0x02)
+      call Leds.led1On();
+    else
+      call Leds.led1Off();
+    if (val & 0x04)
+      call Leds.led2On();
+    else
+      call Leds.led2Off();
+  }
 
+  void ledShowInstruct() {
+    setLeds(currentInstruct);
+  }
 
   void getInputs() {
     call Read1.read();
@@ -151,58 +166,44 @@ implementation {
 
     //检验摇杆
     if (flag == FALSE) {
-      if ( joystick_y > 500 ){ //前进
-        joystick = 0x02;
+      if ( joystick_y > 505 ){ //前进
+        currentInstruct = 0x02;
         sndPayload->type = 0x02;
         sndPayload->data = MOVE_SPEED;
       }
-      else if ( joystick_y < 500 ){  //后退
-        joystick = 0x03;
+      else if ( joystick_y < 495 ){  //后退
+        currentInstruct = 0x03;
         sndPayload->type = 0x03;
+        sndPayload->data = MOVE_SPEED;
+      }      
+      else if (joystick_x < 495 ){  //左转
+        currentInstruct = 0x04;
+        sndPayload->type = 0x04;
+        sndPayload->data = MOVE_SPEED;
+      }
+      else if (joystick_x > 505){  //右转
+        currentInstruct = 0x05;
+        sndPayload->type = 0x05;
         sndPayload->data = MOVE_SPEED;
       }
       else {  //停止
-        joystick = 0x06;  
+        currentInstruct = 0x06;  
         sndPayload->type = 0x06;
         sndPayload->data = 0;
       }
-      // else if (joystick_x > 500 && joystick_x < 500){  //左转
-      //   joystick = 0x04;
-      // }
-      // else if (joystick_x > 500 && joystick_x < 500){  //右转
-      //   joystick = 0x05;
-      // }
-      // else {  //停止
-      //   joystick = 0x06;  
-      // }
     }
 
     //发送
-    counter++;
     if (!busy) {
       if (sndPayload == NULL) {
         return;
       }
 
+      ledShowInstruct();
       if (call AMSend.send(AM_SEND_ID, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
         busy = TRUE;
       }
     }
-  }
-
-  void setLeds(uint16_t val) {
-    if (val & 0x01)
-      call Leds.led0On();
-    else 
-      call Leds.led0Off();
-    if (val & 0x02)
-      call Leds.led1On();
-    else
-      call Leds.led1Off();
-    if (val & 0x04)
-      call Leds.led2On();
-    else
-      call Leds.led2Off();
   }
 
   event void Boot.booted() {
@@ -227,7 +228,7 @@ implementation {
 
   event void AMSend.sendDone(message_t* msg, error_t err) {
     if (&pkt == msg) {
-      pre_joystick = joystick;
+      previousInstruct = currentInstruct;
       busy = FALSE;
     }
   }
