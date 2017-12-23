@@ -108,32 +108,12 @@ implementation {
     command error_t Car.Right(uint16_t value) { return handleCommand(TYPE_RIGHT, value); }
     command error_t Car.Pause() { return handleCommand(TYPE_PAUSE, 0); }
     
-    command error_t Car.QuiryReader(uint8_t value) {
+    // command error_t Car.QuiryReader(uint8_t value) {}
+    // event void Car.readDone(error_t state, uint16_t data) {}
 
-    }
-
-    event void Car.readDone(error_t state, uint16_t data) {
-
-    }
-
-    command error_t Car.InitMaxSpeed(uint16_t value) {
-
-    }
-
-    command error_t Car.InitMinSpeed(uint16_t value) {
-
-    }
-
-    command error_t Car.InitLeftServo(uint16_t value) {
-
-    }
-
-    command error_t Car.InitRightServo(uint16_t value) {
-
-    }
-
-    command error_t Car.InitMidServo(uint16_t value) {
-
-    }
-
+    // command error_t Car.InitMaxSpeed(uint16_t value) {}
+    // command error_t Car.InitMinSpeed(uint16_t value) {}
+    // command error_t Car.InitLeftServo(uint16_t value) {}
+    // command error_t Car.InitRightServo(uint16_t value) {}
+    // command error_t Car.InitMidServo(uint16_t value) {}
 }
