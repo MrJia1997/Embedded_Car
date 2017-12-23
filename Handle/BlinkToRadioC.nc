@@ -82,15 +82,15 @@ implementation {
   uint8_t previousInstruct = 0x06;
 
   void setLeds(uint8_t val) {
-    if (val & 0x01)
+    if (val & 0x1)
       call Leds.led0On();
     else 
       call Leds.led0Off();
-    if (val & 0x02)
+    if (val & 0x2)
       call Leds.led1On();
     else
       call Leds.led1Off();
-    if (val & 0x04)
+    if (val & 0x4)
       call Leds.led2On();
     else
       call Leds.led2Off();
