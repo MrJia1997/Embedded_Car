@@ -67,10 +67,14 @@ implementation {
   components new JoyStickAppC() as JoyStickAppC;
   App.Read1 -> JoyStickAppC.Read1;
   App.Read2 -> JoyStickAppC.Read2;
-  components new AMSenderC(AM_BLINKTORADIO);
+  components new AMSenderC(AM_BLINKTORADIOMSG);
   App.AMSend -> AMSenderC;
-  components new AMReceiverC(AM_BLINKTORADIO);
+  components new AMReceiverC(AM_BLINKTORADIOMSG);
   App.Receive -> AMReceiverC;
   components ButtonC;
   App.Button -> ButtonC.Button;
+
+  components SerialActiveMessageC;
+  App.SerialAMSend -> SerialActiveMessageC.AMSend[AM_STEPMSG];
+  App.SerialControl -> SerialActiveMessageC;
 }

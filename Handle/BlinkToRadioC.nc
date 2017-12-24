@@ -65,9 +65,13 @@ module BlinkToRadioC {
   uses interface Read<uint16_t> as Read1;
   uses interface Read<uint16_t> as Read2;
   uses interface Button;
+
+  uses interface AMSend as SerialAMSend;
+  uses interface SplitControl as SerialControl;
 }
 implementation {
   message_t pkt;
+  message_t pkt2;
   bool busy = FALSE;
 
   //操作信息
@@ -78,8 +82,8 @@ implementation {
   //当前已经获取了多少个输入
   int gotInputCount = 0;
 
-  uint8_t currentInstruct = 0x06;
-  uint8_t previousInstruct = 0x06;
+  uint8_t currentInstruct = 0x00;
+  uint8_t previousInstruct = 0x00;
 
   void setLeds(uint8_t val) {
     if (val & 0x1)
@@ -117,6 +121,7 @@ implementation {
 
   void sendInstruct() {
     BlinkToRadioMsg* sndPayload;
+    StepMsg* sndPayload2;
     int i=0;
     bool flag = FALSE;
 
@@ -124,64 +129,70 @@ implementation {
 
     //检验按钮
     for (i=0;i<6;i++) {
-      if (buttons[i] == TRUE) {
-        switch (i){
-          case 0: { //舵机1
-            sndPayload->type = 0x01;
-            sndPayload->data = SPIN_ANGLE;
-            break;
-          }
-          case 1: { //舵机2
-            sndPayload->type = 0x07;
-            sndPayload->data = SPIN_ANGLE;
-            break;
-          }
-          case 2: { //舵机3
-            sndPayload->type = 0x08;
-            sndPayload->data = SPIN_ANGLE;
-            break;
-          }
-          case 3: { //左转
-            sndPayload->type = 0x04;
-            sndPayload->data = MOVE_SPEED;
-            break;
-          }
-          case 4: { //右转
-            sndPayload->type = 0x05;
-            sndPayload->data = MOVE_SPEED;
-            break;
-          }
-          case 5: { //停止
-            sndPayload->type = 0x06;
-            sndPayload->data = 0;
-            break;
-          }
-          default:
-            break;
+      if (buttons[i] == FALSE) {
+        if (i == 0){ //舵机1
+          currentInstruct = 0x01;
+          sndPayload->type = 0x01;
+          sndPayload->data = SPIN_ANGLE;
+          flag = TRUE;
+          break;
         }
-        flag = TRUE;
-        break; 
+        else if ( i==1 ){ //舵机2
+          currentInstruct = 0x07;
+          sndPayload->type = 0x07;
+          sndPayload->data = SPIN_ANGLE;
+          flag = TRUE;
+          break;
+        }
+        else if ( i==2 ){ //舵机3
+          currentInstruct = 0x08;
+          sndPayload->type = 0x08;
+          sndPayload->data = SPIN_ANGLE;
+          flag = TRUE;
+          break;
+        }
+        //else if ( i==3 ){ //左转
+        //  currentInstruct = 0x04;
+        //  sndPayload->type = 0x04;
+        //  sndPayload->data = MOVE_SPEED;
+        //  flag = TRUE;
+        //  break;
+        //}
+        else if ( i==4 ){ //右转
+          currentInstruct = 0x05;
+          sndPayload->type = 0x05;
+          sndPayload->data = MOVE_SPEED;
+          flag = TRUE;
+          break;
+        }
+        else if ( i==5 ){ //停止
+          currentInstruct = 0x06;
+          sndPayload->type = 0x06;
+          sndPayload->data = 0;
+          flag = TRUE;
+          break;
+        }
       }
     }
 
     //检验摇杆
     if (flag == FALSE) {
-      if ( joystick_y > 505 ){ //前进
+      if ( joystick_y < 500 ){ //前进
         currentInstruct = 0x02;
         sndPayload->type = 0x02;
         sndPayload->data = MOVE_SPEED;
       }
-      else if ( joystick_y < 495 ){  //后退
+      else if ( joystick_y > 3500 ){  //后退
         currentInstruct = 0x03;
         sndPayload->type = 0x03;
         sndPayload->data = MOVE_SPEED;
       }      
-      else if (joystick_x < 495 ){  //左转
+      else if (joystick_x > 3500 ){  //左转
         currentInstruct = 0x04;
         sndPayload->type = 0x04;
         sndPayload->data = MOVE_SPEED;
       }
-      else if (joystick_x > 505){  //右转
+      else if (joystick_x < 500 ){  //右转
         currentInstruct = 0x05;
         sndPayload->type = 0x05;
         sndPayload->data = MOVE_SPEED;
@@ -193,6 +204,19 @@ implementation {
       }
     }
 
+    //Serial Output
+    sndPayload2 = (StepMsg*)(call Packet.getPayload(&pkt2, sizeof(StepMsg)));
+    sndPayload2->buttonA = buttons[0];
+    sndPayload2->buttonB = buttons[1];
+    sndPayload2->buttonC = buttons[2];
+    sndPayload2->buttonD = buttons[3];
+    sndPayload2->buttonE = buttons[4];
+    sndPayload2->buttonF = buttons[5];
+    if (call SerialAMSend.send(AM_BROADCAST_ADDR, &pkt2, sizeof(StepMsg)) == SUCCESS){
+
+    }
+
+
     //发送
     if (!busy) {
       if (sndPayload == NULL) {
@@ -200,7 +224,7 @@ implementation {
       }
 
       ledShowInstruct();
-      if (call AMSend.send(AM_SEND_ID, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
+      if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
         busy = TRUE;
       }
     }
@@ -208,6 +232,12 @@ implementation {
 
   event void Boot.booted() {
     call AMControl.start();
+    call SerialControl.start();
+    call Button.start();
+
+    call Leds.led0On();
+    call Leds.led1On();
+    call Leds.led2On();
   }
 
   event void AMControl.startDone(error_t err) {
@@ -222,6 +252,14 @@ implementation {
   event void AMControl.stopDone(error_t err) {
   }
 
+  event void SerialControl.startDone(error_t err){
+
+  }
+
+  event void SerialControl.stopDone(error_t err){
+
+  }
+
   event void Timer0.fired() {
     sendOneInstruct();
   }
@@ -231,6 +269,10 @@ implementation {
       previousInstruct = currentInstruct;
       busy = FALSE;
     }
+  }
+
+  event void SerialAMSend.sendDone(message_t* msg, error_t err){
+
   }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
@@ -332,9 +374,9 @@ implementation {
   }
 
   event void Button.startDone(error_t error) {
-    if (error != SUCCESS) {
-      call Button.start();
-    }
+    // if (error != SUCCESS) {
+    //  call Button.start();
+    // }
   }
 
   event void Button.stopDone(error_t error) {
