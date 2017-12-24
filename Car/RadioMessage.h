@@ -2,7 +2,8 @@
 #define RADIOMESSAGE_H
 
 enum {
-    AM_BLINKTORADIO = 6,
+    AM_BLINKTORADIOMSG = 6,
+    AM_SERIAL_MSG = 10,
     AM_SEND_ID = 1234
 };
 

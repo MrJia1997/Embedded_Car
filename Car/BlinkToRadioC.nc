@@ -1,4 +1,5 @@
 #include "RadioMessage.h"
+#include <printf.h>
 
 module BlinkToRadioC {
     uses interface Boot;
@@ -8,6 +9,7 @@ module BlinkToRadioC {
     uses interface AMSend;
     uses interface Receive;
     uses interface SplitControl as RadioControl;
+    uses interface SplitControl as SerialControl;
 }
 
 implementation {
@@ -17,6 +19,8 @@ implementation {
     
     event void Boot.booted() {
         call RadioControl.start();
+        call SerialControl.start();
+        printf("Boot", "Boot complete");
     }
 
     event void RadioControl.startDone(error_t err) {
@@ -24,7 +28,13 @@ implementation {
             call RadioControl.start();
     }
 
+    event void SerialControl.startDone(error_t err) {
+        if (err != SUCCESS) 
+            call SerialControl.start();
+    }
+
     event void RadioControl.stopDone(error_t err) {}
+    event void SerialControl.stopDone(error_t err) {}
 
     void setLeds(uint8_t val) {
         if (val & 0x01)
@@ -55,7 +65,7 @@ implementation {
             return NULL;
         }
         
-        rcvPayload = (BlinkToRadioMsg*)msg;
+        rcvPayload = (BlinkToRadioMsg*)payload;
         sndPayload = (BlinkToRadioMsg*)(call Packet.getPayload(&pkt, sizeof(BlinkToRadioMsg)));
         if (sndPayload == NULL) {
             call Leds.led0On();
@@ -64,8 +74,8 @@ implementation {
         
         local.type = rcvPayload->type;
         local.data = rcvPayload->data;
-        setLeds(local.type - 1);
-
+        // setLeds(local.type);
+        // call Leds.led0Toggle();
         switch(local.type){
             case 1: call Car.Angle(local.data); break;
             case 2: call Car.Forward(local.data); break;
@@ -79,9 +89,12 @@ implementation {
         }
         
         memcpy(sndPayload, rcvPayload ,sizeof(BlinkToRadioMsg));
+
         if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
             busy = TRUE;
+            // call Leds.led1Toggle();
         }
+        // printf("Radio", "Type: %u and Value: %u\n", local.type, local.data); 
 
         return msg;
     }

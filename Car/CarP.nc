@@ -2,6 +2,7 @@ module CarP {
     provides interface Car;
 
     uses {
+        interface Leds;
         interface HplMsp430Usart as Usart;
         // interface HplMsp430UsartInterrupts as Interrupts;
         interface Resource;
@@ -57,7 +58,7 @@ implementation {
         if (call Usart.isTxEmpty() == SUCCESS) {
             localInit();
             local.type = type;
-            local.data1 = value & 0xFF;
+            local.data1 = value & 0x00FF;
             local.data2 = value >> 8;
             sendCount = 0;
             post startSendCommand();
@@ -91,23 +92,23 @@ implementation {
         };
         call Usart.setModeUart(&config1);
         call Usart.enableUart();
-        // TODO: set controller status ?
-        // U0CTL &= ~SYNC;
+        atomic U0CTL &= ~SYNC;
     }
 
     void writeCommand() {
+        call Leds.led1Toggle();
         sendCount = 0;
         while(1) {
-            if(call Usart.isTxEmpty() == SUCCESS) {
+            if(call Usart.isTxEmpty()) {
                 switch(sendCount) {
-                    case 0: call Usart.tx(local.header1); break;
-                    case 1: call Usart.tx(local.header2); break;
-                    case 2: call Usart.tx(local.type); break;
-                    case 3: call Usart.tx(local.data1); break;
-                    case 4: call Usart.tx(local.data2); break;
-                    case 5: call Usart.tx(local.footer1); break;
-                    case 6: call Usart.tx(local.footer2); break;
-                    default: call Usart.tx(local.footer3); 
+                    case 0: call Usart.tx(local.header1); call Leds.led2Toggle(); break;
+                    case 1: call Usart.tx(local.header2); call Leds.led2Toggle(); break;
+                    case 2: call Usart.tx(local.type); call Leds.led2Toggle(); break;
+                    case 3: call Usart.tx(local.data1); call Leds.led2Toggle(); break;
+                    case 4: call Usart.tx(local.data2); call Leds.led2Toggle(); break;
+                    case 5: call Usart.tx(local.footer1); call Leds.led2Toggle(); break;
+                    case 6: call Usart.tx(local.footer2); call Leds.led2Toggle(); break;
+                    default: call Usart.tx(local.footer3); call Leds.led2Toggle();
                 }
                 sendCount++;
                 if (sendCount >= 8) {
@@ -116,6 +117,7 @@ implementation {
                 }
             }
         }
+        call Resource.release();
     }
 
     event void Resource.granted() {
@@ -123,14 +125,14 @@ implementation {
         writeCommand();
     }
 
-    command error_t Car.Angle(uint16_t value) { return handleCommand(TYPE_SERVO_1, value); }
-    command error_t Car.Angle_Senc(uint16_t value) { return handleCommand(TYPE_SERVO_2, value); }
-    command error_t Car.Angle_Third(uint16_t value) { return handleCommand(TYPE_SERVO_3, value); }
-    command error_t Car.Forward(uint16_t value) { return handleCommand(TYPE_FORWARD, value); }
-    command error_t Car.Back(uint16_t value) { return handleCommand(TYPE_BACK, value); }
-    command error_t Car.Left(uint16_t value) { return handleCommand(TYPE_LEFT, value); }
-    command error_t Car.Right(uint16_t value) { return handleCommand(TYPE_RIGHT, value); }
-    command error_t Car.Pause() { return handleCommand(TYPE_PAUSE, 0); }
+    command error_t Car.Angle(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_SERVO_1, value); }
+    command error_t Car.Angle_Senc(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_SERVO_2, value); }
+    command error_t Car.Angle_Third(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_SERVO_3, value); }
+    command error_t Car.Forward(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_FORWARD, value); }
+    command error_t Car.Back(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_BACK, value); }
+    command error_t Car.Left(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_LEFT, value); }
+    command error_t Car.Right(uint16_t value) { call Leds.led0Toggle(); return handleCommand(TYPE_RIGHT, value); }
+    command error_t Car.Pause() { call Leds.led0Toggle(); return handleCommand(TYPE_PAUSE, 0); }
     
     // command error_t Car.QuiryReader(uint8_t value) {}
     // event void Car.readDone(error_t state, uint16_t data) {}

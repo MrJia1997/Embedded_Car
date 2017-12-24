@@ -3,7 +3,10 @@ configuration CarC {
 }
 implementation {
     components CarP;
-    Car = CarP;
+    Car = CarP.Car;
+
+    components LedsC;
+    CarP.Leds -> LedsC;
 
     components HplMsp430Usart0C as HplUsart;
     components new Msp430Uart0C() as Uart;
