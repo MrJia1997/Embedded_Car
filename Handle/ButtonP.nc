@@ -10,6 +10,14 @@ module ButtonP {
     }
 }
 implementation{
+    bool pinA;
+    bool pinB;
+    bool pinC;
+    bool pinD;
+    bool pinE;
+    bool pinF;
+
+
     command void Button.start() {
         error_t error = SUCCESS;
 
@@ -37,44 +45,44 @@ implementation{
 
     command void Button.pinvalueA() {
         error_t error = SUCCESS;
-        bool val = call PortA.get();
+        pinA = call PortA.get();
 
-        signal Button.pinvalueADone(error,val);
+        signal Button.pinvalueADone(error,pinA);
     }
 
     command void Button.pinvalueB() {
         error_t error = SUCCESS;
-        bool val = call PortB.get();
+        pinB = call PortB.get();
 
-        signal Button.pinvalueBDone(error,val);
+        signal Button.pinvalueBDone(error,pinB);
     }
 
     command void Button.pinvalueC() {
         error_t error = SUCCESS;
-        bool val = call PortC.get();
+        pinC = call PortC.get();
 
-        signal Button.pinvalueCDone(error,val);
+        signal Button.pinvalueCDone(error,pinC);
     }
 
     command void Button.pinvalueD() {
         error_t error = SUCCESS;
-        bool val = call PortD.get();
+        pinD = call PortD.get();
 
-        signal Button.pinvalueDDone(error,val);
+        signal Button.pinvalueDDone(error,pinD);
     }
 
     command void Button.pinvalueE() {
         error_t error = SUCCESS;
-        bool val = call PortE.get();
+        pinE = call PortE.get();
 
-        signal Button.pinvalueEDone(error,val);
+        signal Button.pinvalueEDone(error,pinE);
     }
 
     command void Button.pinvalueF() {
         error_t error = SUCCESS;
-        bool val = call PortF.get();
+        pinF = call PortF.get();
 
-        signal Button.pinvalueFDone(error,val);
+        signal Button.pinvalueFDone(error,pinF);
     }
 
 }
