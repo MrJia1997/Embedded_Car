@@ -8,6 +8,7 @@ interface Car {
     command error_t Left(uint16_t value);
     command error_t Right(uint16_t value);
     command error_t Pause();
+    command error_t Angle_Init();
     // command error_t QuiryReader(uint8_t value);
     // event void readDone(error_t state, uint16_t data);
     // command error_t InitMaxSpeed(uint16_t value);

@@ -1,6 +1,5 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
-
 enum {
     HEADER_1 = 0x01,
     HEADER_2 = 0x02,
@@ -26,6 +25,6 @@ typedef struct Control_Msg {
     uint8_t footer1;
     uint8_t footer2;
     uint8_t footer3;
-}
+} Control_Msg;
 
 #endif
