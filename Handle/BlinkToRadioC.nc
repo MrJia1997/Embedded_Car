@@ -51,7 +51,6 @@
 #include <Msp430Adc12.h>
 #include "BlinkToRadio.h"
 
-#define SPIN_ANGLE 2500
 #define MOVE_SPEED 500
 
 module BlinkToRadioC {
@@ -130,24 +129,24 @@ implementation {
     //检验按钮
     for (i=0;i<6;i++) {
       if (buttons[i] == FALSE) {
-        if (i == 0){ //舵机1
+        if (i == 0){ //舵机1 smaller
           currentInstruct = 0x01;
           sndPayload->type = 0x01;
-          sndPayload->data = SPIN_ANGLE;
+          sndPayload->data = 0;
           flag = TRUE;
           break;
         }
-        else if ( i==1 ){ //舵机2
+        else if ( i==1 ){ //舵机1 bigger
+          currentInstruct = 0x01;
+          sndPayload->type = 0x01;
+          sndPayload->data = 1;
+          flag = TRUE;
+          break;
+        }
+        else if ( i==2 ){ //舵机2 smaller
           currentInstruct = 0x07;
           sndPayload->type = 0x07;
-          sndPayload->data = SPIN_ANGLE;
-          flag = TRUE;
-          break;
-        }
-        else if ( i==2 ){ //舵机3
-          currentInstruct = 0x08;
-          sndPayload->type = 0x08;
-          sndPayload->data = SPIN_ANGLE;
+          sndPayload->data = 0;
           flag = TRUE;
           break;
         }
@@ -158,16 +157,16 @@ implementation {
         //  flag = TRUE;
         //  break;
         //}
-        else if ( i==4 ){ //右转
-          currentInstruct = 0x05;
-          sndPayload->type = 0x05;
-          sndPayload->data = MOVE_SPEED;
+        else if ( i==4 ){ //duoji2 bigger
+          currentInstruct = 0x07;
+          sndPayload->type = 0x07;
+          sndPayload->data = 1;
           flag = TRUE;
           break;
         }
-        else if ( i==5 ){ //停止
-          currentInstruct = 0x06;
-          sndPayload->type = 0x06;
+        else if ( i==5 ){ //reset
+          currentInstruct = 0x09;
+          sndPayload->type = 0x09;
           sndPayload->data = 0;
           flag = TRUE;
           break;
