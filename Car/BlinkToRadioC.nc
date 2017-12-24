@@ -20,6 +20,7 @@ implementation {
     event void Boot.booted() {
         call RadioControl.start();
         call SerialControl.start();
+        call Car.Angle_Init();
         printf("Boot", "Boot complete");
     }
 
@@ -74,7 +75,7 @@ implementation {
         
         local.type = rcvPayload->type;
         local.data = rcvPayload->data;
-        // setLeds(local.type);
+        setLeds(local.type);
         // call Leds.led0Toggle();
         switch(local.type){
             case 1: call Car.Angle(local.data); break;
@@ -85,6 +86,7 @@ implementation {
             case 6: call Car.Pause(); break;
             case 7: call Car.Angle_Senc(local.data); break;
             case 8: call Car.Angle_Third(local.data); break;
+            case 9: call Car.Angle_Init(); break;
             default: clearLeds();
         }
         
