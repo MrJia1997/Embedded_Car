@@ -1,4 +1,3 @@
-#include <Timer.h>
 #include "RadioMessage.h"
 
 configuration BlinkToRadioAppC {
@@ -12,14 +11,15 @@ implementation {
     App.Leds -> LedsC;
     
     components CarC;
-    App.Car -> Car;
+    App.Car -> CarC;
 
     components ActiveMessageC;
-    App.Packet -> ActiveMessageC;
     App.RadioControl -> ActiveMessageC;
     
     components new AMReceiverC(AM_BLINKTORADIO);
     App.Receive -> AMReceiverC;
 
-    
+    components SerialActiveMessageC;
+    App.Packet -> SerialActiveMessageC;
+    App.AMSend -> SerialActiveMessageC.AMSend[AM_BLINKTORADIO];
 }
